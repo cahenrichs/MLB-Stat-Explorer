@@ -6,7 +6,9 @@
   "scripts": {
     "dev": "corepack pnpm --parallel --filter @mlb-stat-explorer/api --filter @mlb-stat-explorer/web dev",
     "build": "corepack pnpm -r build",
-    "typecheck": "corepack pnpm -r typecheck"
+    "typecheck": "corepack pnpm -r typecheck",
+    "db:generate": "corepack pnpm --filter @mlb-stat-explorer/db db:generate",
+    "db:migrate": "corepack pnpm --filter @mlb-stat-explorer/db db:migrate"
   },
   "devDependencies": {
     "@types/node": "^22.10.2",
