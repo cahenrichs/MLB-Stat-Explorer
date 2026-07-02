@@ -1,0 +1,15 @@
+node_modules
+dist
+.env
+.env.*
+!.env.example
+
+apps/web/dist
+apps/api/dist
+packages/db/dist
+
+ingestion/.venv
+ingestion/data
+BigPicture.md 
+Plan.md
+V2.md
