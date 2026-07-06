@@ -185,6 +185,12 @@ h1 {
   background: #fef2f2;
 }
 
+.state-message.compact {
+  margin-top: 0;
+  margin-bottom: 14px;
+  padding: 12px 14px;
+}
+
 .results-wrap,
 .comparison-table-wrap {
   margin-top: 22px;

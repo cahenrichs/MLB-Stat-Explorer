@@ -1,60 +1,18 @@
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
-
-type BattingStatRow = {
-  playerId: number;
-  fangraphsId: number;
-  playerName: string;
-  season: number;
-  team: string | null;
-  source: "fangraphs";
-  games: number | null;
-  plateAppearances: number | null;
-  homeRuns: number | null;
-  runs: number | null;
-  runsBattedIn: number | null;
-  stolenBases: number | null;
-  walkRate: number | null;
-  strikeoutRate: number | null;
-  avg: number | null;
-  obp: number | null;
-  slg: number | null;
-  ops: number | null;
-  woba: number | null;
-  wrcPlus: number | null;
-  war: number | null;
-};
-
-type ComparisonStat = {
-  key: keyof BattingStatRow;
-  label: string;
-  format: "integer" | "average" | "percent" | "oneDecimal";
-  direction: "higher" | "lower";
-};
+import {
+  type BattingStatRow,
+  comparisonStats,
+  formatStat,
+  getWinner,
+  toggleSelectedPlayer as getNextSelectedPlayers
+} from "./statUtils";
 
 const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? "/api";
 
-const comparisonStats: ComparisonStat[] = [
-  { key: "games", label: "G", format: "integer", direction: "higher" },
-  { key: "plateAppearances", label: "PA", format: "integer", direction: "higher" },
-  { key: "homeRuns", label: "HR", format: "integer", direction: "higher" },
-  { key: "runs", label: "R", format: "integer", direction: "higher" },
-  { key: "runsBattedIn", label: "RBI", format: "integer", direction: "higher" },
-  { key: "stolenBases", label: "SB", format: "integer", direction: "higher" },
-  { key: "walkRate", label: "BB%", format: "percent", direction: "higher" },
-  { key: "strikeoutRate", label: "K%", format: "percent", direction: "lower" },
-  { key: "avg", label: "AVG", format: "average", direction: "higher" },
-  { key: "obp", label: "OBP", format: "average", direction: "higher" },
-  { key: "slg", label: "SLG", format: "average", direction: "higher" },
-  { key: "ops", label: "OPS", format: "average", direction: "higher" },
-  { key: "woba", label: "wOBA", format: "average", direction: "higher" },
-  { key: "wrcPlus", label: "wRC+", format: "integer", direction: "higher" },
-  { key: "war", label: "WAR", format: "oneDecimal", direction: "higher" }
-];
-
 export function App() {
-  const [season, setSeason] = useState<number | undefined>();
-  const [searchText, setSearchText] = useState("");
+  const [season, setSeason] = useState<number | undefined>(() => getInitialSeason());
+  const [searchText, setSearchText] = useState(() => getInitialSearchText());
   const [debouncedSearchText, setDebouncedSearchText] = useState("");
   const [selectedPlayers, setSelectedPlayers] = useState<BattingStatRow[]>([]);
 
@@ -64,10 +22,34 @@ export function App() {
   });
 
   useEffect(() => {
-    if (season === undefined && seasonsQuery.data && seasonsQuery.data.length > 0) {
+    if (seasonsQuery.data && seasonsQuery.data.length > 0 && (season === undefined || !seasonsQuery.data.includes(season))) {
       setSeason(seasonsQuery.data[0]);
     }
   }, [season, seasonsQuery.data]);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const trimmedSearchText = searchText.trim();
+
+    if (season === undefined) {
+      params.delete("season");
+    } else {
+      params.set("season", String(season));
+    }
+
+    if (trimmedSearchText.length === 0) {
+      params.delete("search");
+    } else {
+      params.set("search", trimmedSearchText);
+    }
+
+    const nextSearch = params.toString();
+    const nextUrl = `${window.location.pathname}${nextSearch ? `?${nextSearch}` : ""}${window.location.hash}`;
+
+    if (nextUrl !== `${window.location.pathname}${window.location.search}${window.location.hash}`) {
+      window.history.replaceState(null, "", nextUrl);
+    }
+  }, [season, searchText]);
 
   useEffect(() => {
     const timeoutId = window.setTimeout(() => {
@@ -91,18 +73,7 @@ export function App() {
   }
 
   function toggleSelectedPlayer(player: BattingStatRow) {
-    const isSelected = selectedPlayers.some((selected) => selected.playerId === player.playerId);
-
-    if (isSelected) {
-      setSelectedPlayers((current) => current.filter((selected) => selected.playerId !== player.playerId));
-      return;
-    }
-
-    if (selectedPlayers.length >= 2) {
-      return;
-    }
-
-    setSelectedPlayers((current) => [...current, player]);
+    setSelectedPlayers((current) => getNextSelectedPlayers(current, player));
   }
 
   function removeSelectedPlayer(playerId: number) {
@@ -148,14 +119,22 @@ export function App() {
 
         <SelectedPlayers players={selectedPlayers} onRemove={removeSelectedPlayer} />
 
-        <SearchResults
-          searchText={searchText}
-          rows={battingStatsQuery.data ?? []}
-          isLoading={battingStatsQuery.isFetching}
-          isError={battingStatsQuery.isError}
-          selectedPlayers={selectedPlayers}
-          onTogglePlayer={toggleSelectedPlayer}
-        />
+        {seasonsQuery.isLoading ? (
+          <p className="state-message">Loading imported seasons...</p>
+        ) : seasonsQuery.isError ? (
+          <p className="state-message error">Could not load imported seasons. Check that the API is running.</p>
+        ) : !seasonsQuery.data?.length ? (
+          <p className="state-message">No imported seasons found yet. Import FanGraphs batting data to start comparing players.</p>
+        ) : (
+          <SearchResults
+            searchText={searchText}
+            rows={battingStatsQuery.data ?? []}
+            isLoading={battingStatsQuery.isFetching}
+            isError={battingStatsQuery.isError}
+            selectedPlayers={selectedPlayers}
+            onTogglePlayer={toggleSelectedPlayer}
+          />
+        )}
       </section>
 
       {selectedPlayers.length === 2 ? (
@@ -163,6 +142,22 @@ export function App() {
       ) : null}
     </main>
   );
+}
+
+function getInitialSeason() {
+  const value = new URLSearchParams(window.location.search).get("season");
+
+  if (value === null) {
+    return undefined;
+  }
+
+  const season = Number(value);
+
+  return Number.isInteger(season) ? season : undefined;
+}
+
+function getInitialSearchText() {
+  return new URLSearchParams(window.location.search).get("search") ?? "";
 }
 
 function SelectedPlayers({
@@ -239,8 +234,14 @@ function SearchResults({
     return <p className="state-message">No players found for that search.</p>;
   }
 
+  const selectionIsFull = selectedPlayers.length >= 2;
+
   return (
     <div className="results-wrap">
+      {selectionIsFull ? (
+        <p className="state-message compact">Two players selected. Remove one selected player to choose a different hitter.</p>
+      ) : null}
+
       <table className="results-table">
         <thead>
           <tr>
@@ -255,7 +256,7 @@ function SearchResults({
         <tbody>
           {rows.map((row) => {
             const isSelected = selectedPlayers.some((player) => player.playerId === row.playerId);
-            const isDisabled = !isSelected && selectedPlayers.length >= 2;
+            const isDisabled = !isSelected && selectionIsFull;
 
             return (
               <tr
@@ -357,39 +358,4 @@ async function fetchBattingStats(season: number, playerName: string) {
   }
 
   return (await response.json()) as BattingStatRow[];
-}
-
-function getWinner(firstPlayer: BattingStatRow, secondPlayer: BattingStatRow, stat: ComparisonStat) {
-  const firstValue = firstPlayer[stat.key] as number | null;
-  const secondValue = secondPlayer[stat.key] as number | null;
-
-  if (firstValue === null || secondValue === null || firstValue === secondValue) {
-    return null;
-  }
-
-  if (stat.direction === "higher") {
-    return firstValue > secondValue ? "first" : "second";
-  }
-
-  return firstValue < secondValue ? "first" : "second";
-}
-
-function formatStat(value: number | null, format: ComparisonStat["format"]) {
-  if (value === null) {
-    return "-";
-  }
-
-  if (format === "integer") {
-    return Math.round(value).toString();
-  }
-
-  if (format === "percent") {
-    return `${value.toFixed(1)}%`;
-  }
-
-  if (format === "oneDecimal") {
-    return value.toFixed(1);
-  }
-
-  return value.toFixed(3).replace(/^0/, "");
 }
