@@ -8,6 +8,46 @@ from pybaseball import batting_stats
 from requests.exceptions import HTTPError
 
 
+REQUIRED_FIELDS = [
+    "IDfg",
+    "Name",
+    "Season",
+    "Team",
+    "G",
+    "PA",
+    "HR",
+    "R",
+    "RBI",
+    "SB",
+    "BB%",
+    "K%",
+    "AVG",
+    "OBP",
+    "SLG",
+    "OPS",
+    "wOBA",
+    "wRC+",
+    "WAR",
+]
+
+HEADER_ALIASES = {
+    "PlayerName": "Name",
+    "NameASCII": "Name",
+    "playerid": "IDfg",
+    "IDfg+": "IDfg",
+    "TeamNameAbb": "Team",
+    "BB_pct": "BB%",
+    "BB_percent": "BB%",
+    "bb_percent": "BB%",
+    "K_pct": "K%",
+    "K_percent": "K%",
+    "k_percent": "K%",
+    "wRCPlus": "wRC+",
+    "WRC+": "wRC+",
+    "wrc_plus": "wRC+",
+}
+
+
 def clean_value(value):
     if pd.isna(value):
         return None
@@ -20,6 +60,27 @@ def clean_value(value):
 
 def clean_record(record):
     return {key: clean_value(value) for key, value in record.items()}
+
+
+def normalize_headers(df):
+    normalized = df.copy()
+
+    for alias, canonical in HEADER_ALIASES.items():
+        if alias in normalized.columns and canonical not in normalized.columns:
+            normalized[canonical] = normalized[alias]
+
+    return normalized
+
+
+def validate_required_fields(df):
+    missing_fields = [field for field in REQUIRED_FIELDS if field not in df.columns]
+
+    if missing_fields:
+        missing = ", ".join(missing_fields)
+        detected = ", ".join(str(column) for column in df.columns)
+        raise ValueError(
+            f"Missing required FanGraphs fields: {missing}. Detected headers: {detected}"
+        )
 
 
 def parse_args():
@@ -51,6 +112,9 @@ def main():
                 "Download a FanGraphs batting leaderboard CSV for this season, then run: "
                 f"python ingestion/fetch_fangraphs_batting.py --season {args.season} --csv path/to/file.csv"
             ) from error
+
+    df = normalize_headers(df)
+    validate_required_fields(df)
 
     records = [clean_record(record) for record in df.to_dict(orient="records")]
 
