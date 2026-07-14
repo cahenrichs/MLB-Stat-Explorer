@@ -10,7 +10,6 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
-    "import:fangraphs-batting": "tsx src/scripts/importFangraphsBatting.ts",
     "test": "node --import tsx --test src/**/*.test.ts"
   },
   "dependencies": {

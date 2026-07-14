@@ -25,22 +25,18 @@ test("GET /batting-stats returns rows without raw and numeric decimals as number
         playerName: "Aaron Judge",
         season: 2024,
         team: "NYY",
-        source: "fangraphs",
+        source: "mlb",
         games: 158,
         plateAppearances: 704,
         homeRuns: 58,
         runs: 122,
         runsBattedIn: 144,
         stolenBases: 10,
-        walkRate: "18.9",
-        strikeoutRate: "24.3",
         avg: ".322",
         obp: ".458",
         slg: ".701",
         ops: "1.159",
-        woba: ".476",
-        wrcPlus: 218,
-        war: "11.2"
+        sourceSeason: 2024
       }
     ])
   );
@@ -55,9 +51,7 @@ test("GET /batting-stats returns rows without raw and numeric decimals as number
   const [row] = response.json();
 
   assert.equal(row.playerName, "Aaron Judge");
-  assert.equal(row.walkRate, 18.9);
-  assert.equal(row.avg, 0.322);
-  assert.equal(row.war, 11.2);
+    assert.equal(row.avg, 0.322);
   assert.equal("raw" in row, false);
 });
 
