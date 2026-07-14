@@ -1,6 +1,11 @@
-import { and, asc, desc, eq, ilike, type SQL } from "drizzle-orm";
+import { and, asc, desc, eq, ilike, inArray, type SQL } from "drizzle-orm";
 import Fastify from "fastify";
-import { db, mlbBattingSeasonStats, players } from "@mlb-stat-explorer/db";
+import {
+  db,
+  fangraphsBattingAdvancedStats,
+  mlbBattingSeasonStats,
+  players
+} from "@mlb-stat-explorer/db";
 
 type SortField = "playerName" | "homeRuns";
 type SortOrder = "asc" | "desc";
@@ -55,11 +60,48 @@ export function buildApp(database: typeof db = db) {
     const rows = await database
       .select({
         playerId: players.id,
-        fangraphsId: players.fangraphsId,
+        mlbamId: players.mlbamId,
         playerName: players.name,
         season: mlbBattingSeasonStats.season,
+        mlbImportedAt: mlbBattingSeasonStats.importedAt,
+        games: mlbBattingSeasonStats.games,
+        plateAppearances: mlbBattingSeasonStats.plateAppearances,
+        homeRuns: mlbBattingSeasonStats.homeRuns,
+        runs: mlbBattingSeasonStats.runs,
+        runsBattedIn: mlbBattingSeasonStats.runsBattedIn,
+        stolenBases: mlbBattingSeasonStats.stolenBases,
+        avg: mlbBattingSeasonStats.avg,
+        obp: mlbBattingSeasonStats.obp,
+        slg: mlbBattingSeasonStats.slg,
+        ops: mlbBattingSeasonStats.ops,
+        fangraphsImportedAt: fangraphsBattingAdvancedStats.importedAt,
+        woba: fangraphsBattingAdvancedStats.woba,
+        wrcPlus: fangraphsBattingAdvancedStats.wrcPlus,
+        war: fangraphsBattingAdvancedStats.war
+      })
+      .from(mlbBattingSeasonStats)
+      .innerJoin(players, eq(mlbBattingSeasonStats.playerId, players.id))
+      .leftJoin(
+        fangraphsBattingAdvancedStats,
+        and(
+          eq(fangraphsBattingAdvancedStats.playerId, mlbBattingSeasonStats.playerId),
+          eq(fangraphsBattingAdvancedStats.season, mlbBattingSeasonStats.season)
+        )
+      )
+      .where(and(...filters))
+      .orderBy(orderBy, asc(players.name))
+      .limit(limit);
+
+    if (rows.length === 0) {
+      return [];
+    }
+
+    const playerIds = rows.map((row) => row.playerId);
+    const teamSplits = await database
+      .select({
+        playerId: mlbBattingSeasonStats.playerId,
         team: mlbBattingSeasonStats.team,
-        source: mlbBattingSeasonStats.source,
+        importedAt: mlbBattingSeasonStats.importedAt,
         games: mlbBattingSeasonStats.games,
         plateAppearances: mlbBattingSeasonStats.plateAppearances,
         homeRuns: mlbBattingSeasonStats.homeRuns,
@@ -72,12 +114,52 @@ export function buildApp(database: typeof db = db) {
         ops: mlbBattingSeasonStats.ops
       })
       .from(mlbBattingSeasonStats)
-      .innerJoin(players, eq(mlbBattingSeasonStats.playerId, players.id))
-      .where(and(...filters))
-      .orderBy(orderBy, asc(players.name))
-      .limit(limit);
+      .where(
+        and(
+          eq(mlbBattingSeasonStats.season, season),
+          eq(mlbBattingSeasonStats.splitType, "team"),
+          inArray(mlbBattingSeasonStats.playerId, playerIds)
+        )
+      );
 
-    return rows.map(convertNumericStats);
+    return rows.map((row) => ({
+      playerId: row.playerId,
+      mlbamId: row.mlbamId,
+      playerName: row.playerName,
+      season: row.season,
+      standard: {
+        source: "mlb" as const,
+        importedAt: row.mlbImportedAt.toISOString(),
+        stats: serializeStandardStats(row)
+      },
+      advanced: row.fangraphsImportedAt
+        ? {
+            source: "fangraphs" as const,
+            available: true as const,
+            importedAt: row.fangraphsImportedAt.toISOString(),
+            stats: {
+              woba: toNumber(row.woba),
+              wrcPlus: row.wrcPlus,
+              war: toNumber(row.war)
+            }
+          }
+        : {
+            source: "fangraphs" as const,
+            available: false as const,
+            importedAt: null,
+            stats: null
+          },
+      teamSplits: teamSplits
+        .filter((split) => split.playerId === row.playerId)
+        .map((split) => ({
+          team: split.team,
+          standard: {
+            source: "mlb" as const,
+            importedAt: split.importedAt.toISOString(),
+            stats: serializeStandardStats(split)
+          }
+        }))
+    }));
   });
 
   app.get("/seasons", async () => {
@@ -157,12 +239,28 @@ function toNumber(value: string | number | null) {
   return Number(value);
 }
 
-function convertNumericStats<T extends Record<string, unknown>>(row: T) {
+function serializeStandardStats(row: {
+  games: number | null;
+  plateAppearances: number | null;
+  homeRuns: number | null;
+  runs: number | null;
+  runsBattedIn: number | null;
+  stolenBases: number | null;
+  avg: string | number | null;
+  obp: string | number | null;
+  slg: string | number | null;
+  ops: string | number | null;
+}) {
   return {
-    ...row,
-    avg: toNumber(row.avg as string | number | null),
-    obp: toNumber(row.obp as string | number | null),
-    slg: toNumber(row.slg as string | number | null),
-    ops: toNumber(row.ops as string | number | null)
+    games: row.games,
+    plateAppearances: row.plateAppearances,
+    homeRuns: row.homeRuns,
+    runs: row.runs,
+    runsBattedIn: row.runsBattedIn,
+    stolenBases: row.stolenBases,
+    avg: toNumber(row.avg),
+    obp: toNumber(row.obp),
+    slg: toNumber(row.slg),
+    ops: toNumber(row.ops)
   };
 }
