@@ -92,6 +92,9 @@ function createMemoryRepository() {
   } = {
     mlbStats,
     fangraphsStats,
+    async transaction(callback) {
+      return callback(repository);
+    },
     async upsertPlayer() {
       return { id: 1 };
     },

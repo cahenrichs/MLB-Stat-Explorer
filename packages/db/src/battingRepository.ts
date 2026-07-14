@@ -53,13 +53,24 @@ export type UpsertFangraphsAdvancedStatInput = {
 };
 
 export type BattingRepository = {
+  transaction<T>(callback: (repository: BattingRepository) => Promise<T>): Promise<T>;
   upsertPlayer(input: UpsertPlayerInput): Promise<{ id: number }>;
   upsertMlbBattingStat(input: UpsertMlbBattingStatInput): Promise<void>;
   upsertFangraphsAdvancedStat(input: UpsertFangraphsAdvancedStatInput): Promise<void>;
 };
 
 export function createBattingRepository(database: Db = db): BattingRepository {
+  function createRepository(transactionDatabase: Db): BattingRepository {
+    return createBattingRepository(transactionDatabase);
+  }
+
   return {
+    async transaction(callback) {
+      return database.transaction((transaction) =>
+        callback(createRepository(transaction as unknown as Db))
+      );
+    },
+
     async upsertPlayer(input) {
       const now = new Date();
       const [player] = await database

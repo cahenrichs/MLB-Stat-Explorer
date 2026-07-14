@@ -2,21 +2,6 @@
 
 ## Active
 
-- [ ] 1. Define source-aware batting storage
-  - Status: Not started
-  - Blocked by: None
-  - End-to-end deliverable: A database migration and typed data-access layer that use MLBAM as canonical player identity, store separate MLB standard-stat and FanGraphs advanced-stat records, preserve raw source payloads, track provenance/import timestamps, and support season totals plus team stints.
-  - Acceptance criteria:
-    - Existing FanGraphs-only source assumptions are removed from schema types and constraints.
-    - Source records can be independently upserted for the same player and season without overwriting one another.
-    - MLB season totals and individual team stints are representable.
-    - Raw payload, source, source season, and import timestamp are retained.
-  - Verification commands:
-    - `corepack pnpm db:generate`
-    - `corepack pnpm db:migrate`
-    - `corepack pnpm --filter @mlb-stat-explorer/db test`
-    - `corepack pnpm typecheck`
-
 - [ ] 2. Build the qualified-hitter MLB season importer
   - Status: Not started
   - Blocked by: Task 1
@@ -96,4 +81,17 @@
 
 ## Completed
 
-No tasks completed.
+- [x] 1. Define source-aware batting storage
+  - Status: Completed
+  - Blocked by: None
+  - End-to-end deliverable: A database migration and typed data-access layer that use MLBAM as canonical player identity, store separate MLB standard-stat and FanGraphs advanced-stat records, preserve raw source payloads, track provenance/import timestamps, and support season totals plus team stints.
+  - Acceptance criteria:
+    - Existing FanGraphs-only source assumptions are removed from schema types and constraints.
+    - Source records can be independently upserted for the same player and season without overwriting one another.
+    - MLB season totals and individual team stints are representable.
+    - Raw payload, source, source season, and import timestamp are retained.
+  - Verification commands:
+    - `corepack pnpm db:generate`
+    - `corepack pnpm db:migrate`
+    - `corepack pnpm --filter @mlb-stat-explorer/db test`
+    - `corepack pnpm typecheck`
