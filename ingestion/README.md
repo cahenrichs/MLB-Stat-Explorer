@@ -1,70 +1,29 @@
 # Ingestion
 
-Python scripts for fetching source data live here.
+FanGraphs advanced metrics are imported from a manually acquired CSV. The application makes no automated FanGraphs request and does not use player-name matching.
 
-For v1, this package will fetch FanGraphs batting season stats through `pybaseball` and write JSON snapshots into `ingestion/data`.
-
-## Setup
-
-Create and activate a Python virtual environment:
+First import the target MLB season so every CSV MLBAM ID can be verified:
 
 ```bash
-python3 -m venv ingestion/.venv
-source ingestion/.venv/bin/activate
+DATABASE_URL="postgres://mlb:mlb@localhost:5433/mlb_stat_explorer" corepack pnpm import:mlb-batting --season 2024
 ```
 
-Install dependencies:
+Save a season-total FanGraphs CSV, for example at `ingestion/data/fangraphs-advanced-2024.csv`, then run:
 
 ```bash
-python -m pip install -r ingestion/requirements.txt
+DATABASE_URL="postgres://mlb:mlb@localhost:5433/mlb_stat_explorer" corepack pnpm import:fangraphs-advanced --season 2024 --csv ingestion/data/fangraphs-advanced-2024.csv
 ```
 
-## Automated FanGraphs Fetch
+## CSV Format
 
-Fetch one batting season through `pybaseball`:
+The CSV must include one row per player-season and these fields:
 
-```bash
-python ingestion/fetch_fangraphs_batting.py --season 2024
-```
+| Field | Accepted headers |
+| --- | --- |
+| MLBAM ID | `MLBAM ID`, `MLBAMID`, `MLBAM_ID` |
+| Season | `Season`, `Year` |
+| wOBA | `wOBA` |
+| wRC+ | `wRC+`, `wRC Plus` |
+| FanGraphs WAR | `WAR`, `fWAR` |
 
-This writes:
-
-```text
-ingestion/data/fangraphs-batting-2024.json
-```
-
-## FanGraphs 403
-
-FanGraphs may reject automated requests with an HTTP 403. When that happens, manually download the FanGraphs batting leaderboard CSV for the target season and use the CSV fallback.
-
-## CSV Fallback
-
-Save the manually downloaded CSV somewhere under `ingestion/data`, for example:
-
-```text
-ingestion/data/fangraphs-batting-2024.csv
-```
-
-Convert it to the JSON snapshot format:
-
-```bash
-python ingestion/fetch_fangraphs_batting.py --season 2024 --csv ingestion/data/fangraphs-batting-2024.csv
-```
-
-The converter adds `Season` when missing, normalizes known FanGraphs header variants, preserves original columns, and validates the required importer fields before writing JSON.
-
-## Import JSON
-
-After creating the JSON snapshot, import it into the database:
-
-```bash
-DATABASE_URL="postgres://mlb:mlb@localhost:5433/mlb_stat_explorer" corepack pnpm import:fangraphs-batting --season 2024
-```
-
-## Tests
-
-Run the standalone ingestion tests with:
-
-```bash
-python -m unittest ingestion/test_fetch_fangraphs_batting.py
-```
+Every row's season must match `--season`. The importer rejects invalid values, duplicate MLBAM IDs, IDs absent from the MLB import, missing fields, and malformed CSV rows. It reports every detected row error and writes nothing when any error is found. Only `wOBA`, `wRC+`, and `WAR` are stored, exclusively as season-total FanGraphs values; the original CSV row is retained for provenance.

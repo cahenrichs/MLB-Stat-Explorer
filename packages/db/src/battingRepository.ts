@@ -1,3 +1,4 @@
+import { eq } from "drizzle-orm";
 import { db, type Db } from "./client.js";
 import { fangraphsBattingAdvancedStats, mlbBattingSeasonStats, players } from "./schema.js";
 
@@ -54,6 +55,7 @@ export type UpsertFangraphsAdvancedStatInput = {
 
 export type BattingRepository = {
   transaction<T>(callback: (repository: BattingRepository) => Promise<T>): Promise<T>;
+  findPlayerByMlbamId(mlbamId: number): Promise<{ id: number } | null>;
   upsertPlayer(input: UpsertPlayerInput): Promise<{ id: number }>;
   upsertMlbBattingStat(input: UpsertMlbBattingStatInput): Promise<void>;
   upsertFangraphsAdvancedStat(input: UpsertFangraphsAdvancedStatInput): Promise<void>;
@@ -69,6 +71,14 @@ export function createBattingRepository(database: Db = db): BattingRepository {
       return database.transaction((transaction) =>
         callback(createRepository(transaction as unknown as Db))
       );
+    },
+
+    async findPlayerByMlbamId(mlbamId) {
+      const [player] = await database
+        .select({ id: players.id })
+        .from(players)
+        .where(eq(players.mlbamId, mlbamId));
+      return player ?? null;
     },
 
     async upsertPlayer(input) {

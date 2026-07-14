@@ -2,37 +2,6 @@
 
 ## Active
 
-- [ ] 2. Build the qualified-hitter MLB season importer
-  - Status: Not started
-  - Blocked by: Task 1
-  - End-to-end deliverable: An idempotent CLI command that fetches one requested MLB regular season from the MLB Stats API and atomically stores standard batting totals for batting-title-qualified hitters, including their team-stint splits.
-  - Acceptance criteria:
-    - The importer accepts a season argument and supports 2024 and later seasons.
-    - It imports the complete standard batting line, not only current UI fields.
-    - It filters to batting-title-qualified hitters and excludes postseason, spring training, minor leagues, and unrelated split types.
-    - A traded player's season total is stored with distinct team stints.
-    - Re-running the command upserts corrections and refreshes provenance timestamps.
-    - Invalid or incomplete API responses leave the prior season import untouched.
-  - Verification commands:
-    - `corepack pnpm --filter @mlb-stat-explorer/db test`
-    - `corepack pnpm typecheck`
-    - `DATABASE_URL="postgres://mlb:mlb@localhost:5433/mlb_stat_explorer" corepack pnpm import:mlb-batting --season 2024`
-
-- [ ] 3. Replace pybaseball with minimal FanGraphs CSV import
-  - Status: Not started
-  - Blocked by: Task 1
-  - End-to-end deliverable: A validated manual FanGraphs CSV importer for season-total `wOBA`, `wRC+`, and fWAR that strictly joins rows to MLB players through MLBAM ID.
-  - Acceptance criteria:
-    - `pybaseball` is removed from runtime dependencies and ingestion documentation.
-    - The importer requires documented MLBAM ID, season, `wOBA`, `wRC+`, and `WAR` fields while accepting documented header aliases.
-    - Invalid values, duplicate IDs, and IDs not known to the MLB import cause an atomic failure with row-level errors.
-    - There is no player-name matching or automated FanGraphs request.
-    - Advanced values are stored only against a season-total record.
-  - Verification commands:
-    - `corepack pnpm --filter @mlb-stat-explorer/db test`
-    - `corepack pnpm typecheck`
-    - `DATABASE_URL="postgres://mlb:mlb@localhost:5433/mlb_stat_explorer" corepack pnpm import:fangraphs-advanced --season 2024 --csv ingestion/data/fangraphs-advanced-2024.csv`
-
 - [ ] 4. Expose a unified player-season API
   - Status: Not started
   - Blocked by: Tasks 1, 2, and 3
@@ -80,6 +49,37 @@
     - `corepack pnpm build`
 
 ## Completed
+
+- [x] 3. Replace pybaseball with minimal FanGraphs CSV import
+  - Status: Completed
+  - Blocked by: Task 1
+  - End-to-end deliverable: A validated manual FanGraphs CSV importer for season-total `wOBA`, `wRC+`, and fWAR that strictly joins rows to MLB players through MLBAM ID.
+  - Acceptance criteria:
+    - `pybaseball` is removed from runtime dependencies and ingestion documentation.
+    - The importer requires documented MLBAM ID, season, `wOBA`, `wRC+`, and `WAR` fields while accepting documented header aliases.
+    - Invalid values, duplicate IDs, and IDs not known to the MLB import cause an atomic failure with row-level errors.
+    - There is no player-name matching or automated FanGraphs request.
+    - Advanced values are stored only against a season-total record.
+  - Verification commands:
+    - `corepack pnpm --filter @mlb-stat-explorer/db test`
+    - `corepack pnpm typecheck`
+    - `DATABASE_URL="postgres://mlb:mlb@localhost:5433/mlb_stat_explorer" corepack pnpm import:fangraphs-advanced --season 2024 --csv ingestion/data/fangraphs-advanced-2024.csv`
+
+- [x] 2. Build the qualified-hitter MLB season importer
+  - Status: Completed
+  - Blocked by: None
+  - End-to-end deliverable: An idempotent CLI command that fetches one requested MLB regular season from the MLB Stats API and atomically stores standard batting totals for batting-title-qualified hitters, including their team-stint splits.
+  - Acceptance criteria:
+    - The importer accepts a season argument and supports 2024 and later seasons.
+    - It imports the complete standard batting line, not only current UI fields.
+    - It filters to batting-title-qualified hitters and excludes postseason, spring training, minor leagues, and unrelated split types.
+    - A traded player's season total is stored with distinct team stints.
+    - Re-running the command upserts corrections and refreshes provenance timestamps.
+    - Invalid or incomplete API responses leave the prior season import untouched.
+  - Verification commands:
+    - `corepack pnpm --filter @mlb-stat-explorer/db test`
+    - `corepack pnpm typecheck`
+    - `DATABASE_URL="postgres://mlb:mlb@localhost:5433/mlb_stat_explorer" corepack pnpm import:mlb-batting --season 2024`
 
 - [x] 1. Define source-aware batting storage
   - Status: Completed

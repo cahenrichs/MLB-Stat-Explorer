@@ -11,6 +11,7 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "import:mlb-batting": "tsx src/scripts/importMlbBatting.ts",
+    "import:fangraphs-advanced": "tsx src/scripts/importFangraphsAdvanced.ts",
     "test": "node --import tsx --test src/**/*.test.ts"
   },
   "dependencies": {

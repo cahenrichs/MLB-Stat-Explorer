@@ -9,7 +9,8 @@
     "typecheck": "corepack pnpm -r typecheck",
     "db:generate": "corepack pnpm --filter @mlb-stat-explorer/db db:generate",
     "db:migrate": "corepack pnpm --filter @mlb-stat-explorer/db db:migrate",
-    "import:mlb-batting": "corepack pnpm --filter @mlb-stat-explorer/db import:mlb-batting"
+    "import:mlb-batting": "corepack pnpm --filter @mlb-stat-explorer/db import:mlb-batting",
+    "import:fangraphs-advanced": "corepack pnpm --filter @mlb-stat-explorer/db import:fangraphs-advanced"
   },
   "devDependencies": {
     "@types/node": "^22.20.0",

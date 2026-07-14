@@ -95,6 +95,9 @@ function createMemoryRepository() {
     async transaction(callback) {
       return callback(repository);
     },
+    async findPlayerByMlbamId() {
+      return { id: 1 };
+    },
     async upsertPlayer() {
       return { id: 1 };
     },

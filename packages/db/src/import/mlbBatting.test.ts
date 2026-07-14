@@ -171,6 +171,9 @@ function createMemoryRepository(
       staged.mlbStats.forEach((value, key) => mlbStats.set(key, value));
       return result;
     },
+    async findPlayerByMlbamId(mlbamId) {
+      return players.get(mlbamId) ? { id: players.get(mlbamId)!.id } : null;
+    },
     async upsertPlayer(input) {
       const existing = players.get(input.mlbamId);
       const player = { id: existing?.id ?? players.size + 1, name: input.name };
