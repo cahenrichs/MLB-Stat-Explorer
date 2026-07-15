@@ -2,8 +2,8 @@
 
 ## Active
 
-- [ ] 4. Expose a unified player-season API
-  - Status: Not started
+- [x] 4. Expose a unified player-season API
+  - Status: Completed
   - Blocked by: Tasks 1, 2, and 3
   - End-to-end deliverable: API endpoints that return an MLB-primary player-season response with separately labeled FanGraphs advanced metrics, source availability, import timestamps, and MLB team splits.
   - Acceptance criteria:

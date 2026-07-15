@@ -1,9 +1,10 @@
 import { useQuery } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import {
   type BattingStatRow,
   comparisonStats,
   formatStat,
+  getStatValue,
   getWinner,
   toggleSelectedPlayer as getNextSelectedPlayers
 } from "./statUtils";
@@ -84,7 +85,7 @@ export function App() {
     <main className="shell">
       <section className="hero">
         <div>
-          <p className="eyebrow">FanGraphs season batting</p>
+          <p className="eyebrow">MLB and FanGraphs season batting</p>
           <h1>MLB Stat Explorer</h1>
           <p className="hero-copy">
             Search a season, pick two hitters, and compare their production side by side.
@@ -124,7 +125,7 @@ export function App() {
         ) : seasonsQuery.isError ? (
           <p className="state-message error">Could not load imported seasons. Check that the API is running.</p>
         ) : !seasonsQuery.data?.length ? (
-          <p className="state-message">No imported seasons found yet. Import FanGraphs batting data to start comparing players.</p>
+          <p className="state-message">No imported seasons found yet. Import MLB batting data to start comparing players.</p>
         ) : (
           <SearchResults
             searchText={searchText}
@@ -184,16 +185,73 @@ function SelectedPlayers({
             <div>
               <strong>{player.playerName}</strong>
               <span>
-                {player.team ?? "No team"} - {player.season}
+                MLB season total - {player.season}
               </span>
             </div>
             <button type="button" onClick={() => onRemove(player.playerId)} aria-label={`Remove ${player.playerName}`}>
               x
             </button>
+            <PlayerDetails player={player} />
           </article>
         ))}
       </div>
     </section>
+  );
+}
+
+function PlayerDetails({ player }: { player: BattingStatRow }) {
+  return (
+    <details className="player-details">
+      <summary>Source details and team splits</summary>
+      <dl className="source-details">
+        <div>
+          <dt>MLB Stats API</dt>
+          <dd>Last imported {formatImportTime(player.standard.importedAt)}</dd>
+        </div>
+        <div>
+          <dt>FanGraphs</dt>
+          <dd>
+            {player.advanced.importedAt
+              ? `Last imported ${formatImportTime(player.advanced.importedAt)}`
+              : "Not available"}
+          </dd>
+        </div>
+      </dl>
+
+      {player.teamSplits.length > 0 ? <TeamSplits player={player} /> : <p className="split-empty">No separate MLB team stints for this season.</p>}
+    </details>
+  );
+}
+
+function TeamSplits({ player }: { player: BattingStatRow }) {
+  return (
+    <div className="team-splits-wrap">
+      <h3>MLB team stints</h3>
+      <table className="team-splits-table">
+        <thead>
+          <tr>
+            <th>Team</th>
+            <th>G</th>
+            <th>PA</th>
+            <th>HR</th>
+            <th>AVG</th>
+            <th>OPS</th>
+          </tr>
+        </thead>
+        <tbody>
+          {player.teamSplits.map((split) => (
+            <tr key={split.team}>
+              <th>{split.team ?? "No team"}</th>
+              <td>{formatStat(split.standard.stats.games, "integer")}</td>
+              <td>{formatStat(split.standard.stats.plateAppearances, "integer")}</td>
+              <td>{formatStat(split.standard.stats.homeRuns, "integer")}</td>
+              <td>{formatStat(split.standard.stats.avg, "average")}</td>
+              <td>{formatStat(split.standard.stats.ops, "average")}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
   );
 }
 
@@ -246,11 +304,10 @@ function SearchResults({
         <thead>
           <tr>
             <th>Player</th>
-            <th>Team</th>
             <th>G</th>
             <th>HR</th>
             <th>OPS</th>
-            <th>WAR</th>
+            <th>fWAR</th>
           </tr>
         </thead>
         <tbody>
@@ -270,11 +327,10 @@ function SearchResults({
                     {row.playerName}
                   </button>
                 </td>
-                <td>{row.team ?? "-"}</td>
-                <td>{formatStat(row.games, "integer")}</td>
-                <td>{formatStat(row.homeRuns, "integer")}</td>
-                <td>{formatStat(row.ops, "average")}</td>
-                <td>{formatStat(row.war, "oneDecimal")}</td>
+                <td>{formatStat(row.standard.stats.games, "integer")}</td>
+                <td>{formatStat(row.standard.stats.homeRuns, "integer")}</td>
+                <td>{formatStat(row.standard.stats.ops, "average")}</td>
+                <td>{formatAdvancedStat(row.advanced.stats?.war ?? null, "oneDecimal")}</td>
               </tr>
             );
           })}
@@ -312,26 +368,41 @@ function ComparisonPanel({
             </tr>
           </thead>
           <tbody>
-            {comparisonStats.map((stat) => {
-              const winner = getWinner(firstPlayer, secondPlayer, stat);
-
-              return (
-                <tr key={stat.key}>
-                  <th>{stat.label}</th>
-                  <td className={winner === "first" ? "winner" : undefined}>
-                    {formatStat(firstPlayer[stat.key] as number | null, stat.format)}
-                  </td>
-                  <td className={winner === "second" ? "winner" : undefined}>
-                    {formatStat(secondPlayer[stat.key] as number | null, stat.format)}
-                  </td>
+            {(["mlb", "fangraphs"] as const).map((source) => (
+              <Fragment key={source}>
+                <tr className="source-row">
+                  <th colSpan={3}>{source === "mlb" ? "MLB Stats API" : "FanGraphs"}</th>
                 </tr>
-              );
-            })}
+                {comparisonStats.filter((stat) => stat.source === source).map((stat) => {
+                  const winner = getWinner(firstPlayer, secondPlayer, stat);
+                  const format = source === "fangraphs" ? formatAdvancedStat : formatStat;
+
+                  return (
+                    <tr key={stat.key}>
+                      <th>{stat.label}</th>
+                      <td className={winner === "first" ? "winner" : undefined}>{format(getStatValue(firstPlayer, stat), stat.format)}</td>
+                      <td className={winner === "second" ? "winner" : undefined}>{format(getStatValue(secondPlayer, stat), stat.format)}</td>
+                    </tr>
+                  );
+                })}
+              </Fragment>
+            ))}
           </tbody>
         </table>
       </div>
     </section>
   );
+}
+
+function formatAdvancedStat(value: number | null, format: Parameters<typeof formatStat>[1]) {
+  return value === null ? "Not available" : formatStat(value, format);
+}
+
+function formatImportTime(value: string) {
+  return new Intl.DateTimeFormat(undefined, {
+    dateStyle: "medium",
+    timeStyle: "short"
+  }).format(new Date(value));
 }
 
 async function fetchSeasons() {

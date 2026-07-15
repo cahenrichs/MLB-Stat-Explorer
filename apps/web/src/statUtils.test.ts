@@ -4,6 +4,7 @@ import {
   type BattingStatRow,
   type ComparisonStat,
   formatStat,
+  getStatValue,
   getWinner,
   toggleSelectedPlayer
 } from "./statUtils.js";
@@ -17,9 +18,10 @@ test("formats baseball stats for display", () => {
 });
 
 test("picks the higher value for higher-is-better stats", () => {
-  const winner = getWinner(makePlayer({ homeRuns: 58 }), makePlayer({ homeRuns: 41 }), {
+  const winner = getWinner(makePlayer(), makePlayer({ standard: standardStats({ homeRuns: 41 }) }), {
     key: "homeRuns",
     label: "HR",
+    source: "mlb",
     format: "integer",
     direction: "higher"
   });
@@ -28,10 +30,11 @@ test("picks the higher value for higher-is-better stats", () => {
 });
 
 test("picks the lower value for lower-is-better stats", () => {
-  const winner = getWinner(makePlayer({ strikeoutRate: 24.3 }), makePlayer({ strikeoutRate: 16.8 }), {
-    key: "strikeoutRate",
-    label: "K%",
-    format: "percent",
+  const winner = getWinner(makePlayer(), makePlayer({ standard: standardStats({ homeRuns: 41 }) }), {
+    key: "homeRuns",
+    label: "HR",
+    source: "mlb",
+    format: "integer",
     direction: "lower"
   });
 
@@ -42,12 +45,21 @@ test("does not pick a winner for ties or missing values", () => {
   const stat: ComparisonStat = {
     key: "war",
     label: "WAR",
+    source: "fangraphs",
     format: "oneDecimal",
     direction: "higher"
   };
 
-  assert.equal(getWinner(makePlayer({ war: 6.4 }), makePlayer({ war: 6.4 }), stat), null);
-  assert.equal(getWinner(makePlayer({ war: null }), makePlayer({ war: 6.4 }), stat), null);
+  assert.equal(getWinner(makePlayer({ advanced: { source: "fangraphs", available: true, importedAt: "2026-07-14T12:05:00.000Z", stats: { woba: 0.4, wrcPlus: 150, war: 6.4 } } }), makePlayer({ advanced: { source: "fangraphs", available: true, importedAt: "2026-07-14T12:05:00.000Z", stats: { woba: 0.4, wrcPlus: 150, war: 6.4 } } }), stat), null);
+  assert.equal(getWinner(makePlayer({ advanced: { source: "fangraphs", available: false, importedAt: null, stats: null } }), makePlayer(), stat), null);
+});
+
+test("reads standard and advanced values from their labeled sources", () => {
+  const player = makePlayer();
+
+  assert.equal(getStatValue(player, { key: "homeRuns", label: "HR", source: "mlb", format: "integer", direction: "higher" }), 58);
+  assert.equal(getStatValue(player, { key: "war", label: "WAR", source: "fangraphs", format: "oneDecimal", direction: "higher" }), 11.2);
+  assert.equal(getStatValue(makePlayer({ advanced: { source: "fangraphs", available: false, importedAt: null, stats: null } }), { key: "war", label: "WAR", source: "fangraphs", format: "oneDecimal", direction: "higher" }), null);
 });
 
 test("toggles selected players while preserving max-two selection order", () => {
@@ -64,26 +76,52 @@ test("toggles selected players while preserving max-two selection order", () => 
 function makePlayer(overrides: Partial<BattingStatRow> = {}): BattingStatRow {
   return {
     playerId: 1,
-    fangraphsId: 15640,
+    mlbamId: 592450,
     playerName: "Aaron Judge",
     season: 2024,
-    team: "NYY",
-    source: "fangraphs",
-    games: 158,
-    plateAppearances: 704,
-    homeRuns: 58,
-    runs: 122,
-    runsBattedIn: 144,
-    stolenBases: 10,
-    walkRate: 18.9,
-    strikeoutRate: 24.3,
-    avg: 0.322,
-    obp: 0.458,
-    slg: 0.701,
-    ops: 1.159,
-    woba: 0.476,
-    wrcPlus: 218,
-    war: 11.2,
+    standard: {
+      source: "mlb",
+      importedAt: "2026-07-14T12:00:00.000Z",
+      stats: {
+        games: 158,
+        plateAppearances: 704,
+        homeRuns: 58,
+        runs: 122,
+        runsBattedIn: 144,
+        stolenBases: 10,
+        avg: 0.322,
+        obp: 0.458,
+        slg: 0.701,
+        ops: 1.159
+      }
+    },
+    advanced: {
+      source: "fangraphs",
+      available: true,
+      importedAt: "2026-07-14T12:05:00.000Z",
+      stats: { woba: 0.476, wrcPlus: 218, war: 11.2 }
+    },
+    teamSplits: [],
     ...overrides
+  };
+}
+
+function standardStats(overrides: Partial<BattingStatRow["standard"]["stats"]>): BattingStatRow["standard"] {
+  return {
+    source: "mlb",
+    importedAt: "2026-07-14T12:00:00.000Z",
+    stats: {
+      games: 158,
+      plateAppearances: 704,
+      homeRuns: 58,
+      runs: 122,
+      runsBattedIn: 144,
+      stolenBases: 10,
+      avg: 0.322,
+      obp: 0.458,
+      slg: 0.701,
+      ops: 1.159,
+      ...overrides
+    }
   };
 }
