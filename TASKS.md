@@ -2,38 +2,9 @@
 
 ## Active
 
-- [x] 4. Expose a unified player-season API
-  - Status: Completed
-  - Blocked by: Tasks 1, 2, and 3
-  - End-to-end deliverable: API endpoints that return an MLB-primary player-season response with separately labeled FanGraphs advanced metrics, source availability, import timestamps, and MLB team splits.
-  - Acceptance criteria:
-    - The API no longer exposes the current FanGraphs-only source-selection model.
-    - Standard values are returned from MLB records and advanced values from FanGraphs records.
-    - A missing FanGraphs import is represented as unavailable rather than as stale, empty, or substituted data.
-    - The API exposes season totals for comparison and team splits for detail display.
-    - API tests cover serialization, provenance, unavailable advanced metrics, and a traded player.
-  - Verification commands:
-    - `corepack pnpm --filter @mlb-stat-explorer/api test`
-    - `corepack pnpm typecheck`
-
-- [ ] 5. Update the comparison UI for unified provenance and splits
-  - Status: Not started
-  - Blocked by: Task 4
-  - End-to-end deliverable: The existing hitter comparison UI displays MLB standard stats, FanGraphs advanced metrics, per-source labels and refresh times, and expandable MLB team-stint details.
-  - Acceptance criteria:
-    - Search selects one player season-total row, never a separate team-stint player.
-    - Standard stats are labeled "MLB Stats API" and advanced values are labeled "FanGraphs."
-    - Missing FanGraphs values display "Not available."
-    - A compact details area displays each source's last successful import time.
-    - Team splits are expandable beneath the selected season total and do not show FanGraphs advanced metrics.
-  - Verification commands:
-    - `corepack pnpm --filter @mlb-stat-explorer/web test`
-    - `corepack pnpm typecheck`
-    - `corepack pnpm build`
-
 - [ ] 6. Cut over 2024 and document operations
-  - Status: Not started
-  - Blocked by: Tasks 2, 3, 4, and 5
+  - Status: In progress
+  - Blocked by: A fresh manually acquired 2024 FanGraphs advanced CSV
   - End-to-end deliverable: A clean 2024 import using the new MLB and FanGraphs pipelines, removal of obsolete FanGraphs-derived database rows/snapshots, and operator documentation for daily MLB imports and manual FanGraphs advanced CSV imports.
   - Acceptance criteria:
     - 2024 standard data is re-imported from MLB rather than migrated from existing FanGraphs rows.
@@ -48,7 +19,36 @@
     - `corepack pnpm typecheck`
     - `corepack pnpm build`
 
+- [x] 4. Expose a unified player-season API
+  - Status: Completed
+  - Blocked by: Tasks 1, 2, and 3
+  - End-to-end deliverable: API endpoints that return an MLB-primary player-season response with separately labeled FanGraphs advanced metrics, source availability, import timestamps, and MLB team splits.
+  - Acceptance criteria:
+    - The API no longer exposes the current FanGraphs-only source-selection model.
+    - Standard values are returned from MLB records and advanced values from FanGraphs records.
+    - A missing FanGraphs import is represented as unavailable rather than as stale, empty, or substituted data.
+    - The API exposes season totals for comparison and team splits for detail display.
+    - API tests cover serialization, provenance, unavailable advanced metrics, and a traded player.
+  - Verification commands:
+    - `corepack pnpm --filter @mlb-stat-explorer/api test`
+    - `corepack pnpm typecheck`
+
 ## Completed
+
+- [x] 5. Update the comparison UI for unified provenance and splits
+  - Status: Completed
+  - Blocked by: Task 4
+  - End-to-end deliverable: The existing hitter comparison UI displays MLB standard stats, FanGraphs advanced metrics, per-source labels and refresh times, and expandable MLB team-stint details.
+  - Acceptance criteria:
+    - Search selects one player season-total row, never a separate team-stint player.
+    - Standard stats are labeled "MLB Stats API" and advanced values are labeled "FanGraphs."
+    - Missing FanGraphs values display "Not available."
+    - A compact details area displays each source's last successful import time.
+    - Team splits are expandable beneath the selected season total and do not show FanGraphs advanced metrics.
+  - Verification commands:
+    - `corepack pnpm --filter @mlb-stat-explorer/web test`
+    - `corepack pnpm typecheck`
+    - `corepack pnpm build`
 
 - [x] 3. Replace pybaseball with minimal FanGraphs CSV import
   - Status: Completed
